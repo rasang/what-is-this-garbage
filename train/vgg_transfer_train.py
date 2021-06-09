@@ -57,16 +57,14 @@ class LossHistory(keras.callbacks.Callback):
 '''
 数据生成
 '''
-datagen = ImageDataGenerator()
-datagen_train = datagen.flow_from_directory(
-    "archive/train",
-    color_mode="rgb",
-    target_size=(200, 200),
-    class_mode="categorical",
-    batch_size=16,
-    shuffle=True,
-    seed=7,
-)
+datagen = ImageDataGenerator(
+    horizontal_flip=True,
+    vertical_flip=True,
+    rescale=1./255,
+    shear_range=0.1,
+    zoom_range=0.1,
+    width_shift_range=0.1,
+    height_shift_range=0.1,)
 
 
 datagen_valid = datagen.flow_from_directory(
