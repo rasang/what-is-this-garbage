@@ -56,19 +56,9 @@ class LossHistory(keras.callbacks.Callback):
 
 '''
 数据生成
-数据增强
 '''
-datagen = ImageDataGenerator(
-    horizontal_flip=True,
-    vertical_flip=True,
-    rescale=1./255,
-    shear_range=0.1,
-    zoom_range=0.1,
-    width_shift_range=0.1,
-    height_shift_range=0.1,)
-
-
-datagen_train= datagen.flow_from_directory(
+datagen = ImageDataGenerator()
+datagen_train = datagen.flow_from_directory(
     "archive/train",
     color_mode="rgb",
     target_size=(200, 200),
@@ -77,6 +67,7 @@ datagen_train= datagen.flow_from_directory(
     shuffle=True,
     seed=7,
 )
+
 
 datagen_valid = datagen.flow_from_directory(
     "archive/val",
@@ -99,7 +90,7 @@ def build_model(hp):
     model = Sequential()
     model.add(Input(shape=(200, 200, 3)))
     # 添加层的代码块
-    base_model = VGG16(weights = 'imagenet', include_top = False)
+    base_model = ResNet50(weights='imagenet', include_top=False)
     for layer in base_model.layers:
         layer.trainable = False
     model.add(base_model)
@@ -111,47 +102,46 @@ def build_model(hp):
     return model
 
 
-def vgg_transfer():
+def resnet_transfer():
     model = Sequential()
     model.add(Input(shape=(200, 200, 3)))
     # 添加层的代码块
-    base_model = VGG16(weights='imagenet', include_top=False)
+    base_model = ResNet50(weights='imagenet', include_top=False)
     for layer in base_model.layers:
         layer.trainable = False
     model.add(base_model)
     model.add(Flatten())
-    model.add(Dense(256, activation='relu'))
-    model.add(Dense(160, activation='relu'))
-    model.add(Dense(160, activation='relu'))
+    # model.add(Dense(224, activation='relu'))
+    # model.add(Dense(160, activation='relu'))
+    # model.add(Dense(256, activation='relu'))
     model.add(Dense(6, activation='softmax'))
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
     return model
 
-
-tuner = Hyperband(
-    build_model,
-    objective='val_acc',
-    max_epochs=20,
-    directory='vgg_transfer_param',
-    hyperparameters=hp,
-    project_name='vgg_transfer_project'
-)
-tuner.search(datagen_train, epochs=10, validation_data=datagen_valid)
-best_hps=tuner.get_best_hyperparameters(1)[0]
-print(best_hps.values)
-# model = build_model()
-# # 编译模型
-# # model.compile(optimizer='Adam',
-# #             loss='categorical_crossentropy',
-# #             metrics=[tf.keras.metrics.categorical_accuracy])
-#
-# history_callback = LossHistory()
-# checkpoint = ModelCheckpoint("trained_model.h5", monitor='val_categorical_accuracy', verbose=1, save_best_only=True, mode='max', period=2)
-# history = model.fit_generator(
-#     generator=datagen_train,
-#     validation_data=datagen_valid,
-#     epochs=30,
-#     validation_freq=1,
-#     callbacks=[history_callback, checkpoint]
+# tuner = Hyperband(
+#     build_model,
+#     objective='val_acc',
+#     max_epochs=20,
+#     directory='resnet_transfer_param',
+#     hyperparameters=hp,
+#     project_name='resnet_transfer_project'
 # )
-# history_callback.loss_plot('epoch')
+# tuner.search(datagen_train, epochs=10, validation_data=datagen_valid)
+# best_hps = tuner.get_best_hyperparameters(1)[0]
+# print(best_hps.values)
+model = resnet_transfer()
+# 编译模型
+# model.compile(optimizer='Adam',
+#             loss='categorical_crossentropy',
+#             metrics=[tf.keras.metrics.categorical_accuracy])
+
+history_callback = LossHistory()
+checkpoint = ModelCheckpoint("resnet_transfer_trained_model.h5", monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+history = model.fit_generator(
+    generator=datagen_train,
+    validation_data=datagen_valid,
+    epochs=30,
+    validation_freq=1,
+    callbacks=[history_callback, checkpoint]
+)
+history_callback.loss_plot('epoch')
